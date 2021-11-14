@@ -42,15 +42,38 @@ class _LITERAL_TYPE(enum.Enum):
         return cls.DEC
 
 
-def _is_separated_validly(string: str, len_: int) -> bool:
-    splitted = string.split(_SEPARATOR)
-    first = splitted.pop(0)
-    if len(first) > len_:
-        return False
-    for seg in splitted:
-        if len(seg) != len_:
-            return False
-    return True
+def _find_invalid_sep(string: str, len_: int) -> int:
+    """Check if number literal is properly separated.
+
+    Returns the position where invalid separator was found, or -1
+    if input is separated validly.
+
+    :param string: Input string.
+    :param len_: Separation length.
+    :returns: Position where invalid separator was found, or -1 for valid input.
+    """
+    toplevel = True
+    current_len = 0
+    for i, s in enumerate(string):
+        if s == _SEPARATOR:
+            if current_len == len_:
+                current_len = 0
+                continue
+            elif current_len < len_ and toplevel:
+                toplevel = False
+                current_len = 0
+                continue
+            else:
+                return i
+
+        if current_len > len_:
+            return i
+
+        current_len += 1
+
+    if current_len != len_:
+        return len(string)
+    return -1
 
 
 class Checker:
@@ -81,10 +104,6 @@ class Checker:
         }
         return
 
-    # def _get_check_for(self, type_: _LITERAL_TYPE):
-    #     name_lower = type_.name.lower()
-    #     return getattr(self, f"_check_{name_lower}")
-
     def run(self) -> Iterable[_ERROR]:
         """Run checker.
 
@@ -100,28 +119,30 @@ class Checker:
         return
 
     def _check_DEC(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
-        if not _is_separated_validly(token.string, self.dec_len):
-            yield (token.end[0], token.end[1], "NSP001 DEC Invalid", None)
+        invalid = _find_invalid_sep(token.string, self.dec_len)
+        if invalid >= 0:
+            yield (token.start[0], token.start[1] + invalid, "NSP001 DEC Invalid", None)
         return
 
     def _check_BIN(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
         body = token.string[2:]
-        if not _is_separated_validly(body, self.bin_len):
-            yield (token.end[0], token.end[1], "NSP011 BIN Invalid", None)
+        invalid = _find_invalid_sep(body, self.bin_len)
+        if invalid >= 0:
+            yield (token.start[0], token.start[1] + invalid, "NSP011 BIN Invalid", None)
         return
-        raise NotImplemented
 
     def _check_OCT(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
         body = token.string[2:]
-        if not _is_separated_validly(body, self.oct_len):
-            yield (token.end[0], token.end[1], "NSP021 OCT Invalid", None)
+        invalid = _find_invalid_sep(body, self.oct_len)
+        if invalid >= 0:
+            yield (token.start[0], token.start[1] + invalid, "NSP021 OCT Invalid", None)
         return
-        raise NotImplemented
 
     def _check_HEX(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
         body = token.string[2:]
-        if not _is_separated_validly(body, self.hex_len):
-            yield (token.end[0], token.end[1], "NSP031 HEX Invalid", None)
+        invalid = _find_invalid_sep(body, self.hex_len)
+        if invalid >= 0:
+            yield (token.start[0], token.start[1] + invalid, "NSP031 HEX Invalid", None)
         return
 
     def _check_POINTFLOAT(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:

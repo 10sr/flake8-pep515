@@ -19,7 +19,7 @@ class TestChecker(unittest.TestCase):
 
     def test_noerror(self) -> None:
         """Test checker with valid input."""
-        input_ = "a = 'aaa'"
+        input_ = "a = 1_234"
         checker = Checker(ast.parse(input_), _tokenize(input_))
         result = checker.run()
         self.assertEqual(len(list(result)), 0)
@@ -28,7 +28,7 @@ class TestChecker(unittest.TestCase):
     def test_error(self) -> None:
         """Test checker with invalid input."""
         # Contents of results are checked in run_flake8/
-        input_ = "a = 'aaa' 'bbb'"
+        input_ = "a = 1_23"
         checker = Checker(ast.parse(input_), _tokenize(input_))
         result = checker.run()
         self.assertEqual(len(list(result)), 1)
