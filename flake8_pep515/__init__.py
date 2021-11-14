@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import ast
 import enum
-import sys
 import tokenize
 
 from typing import Iterable
 from typing import Tuple
-
 
 from ._version import __version__
 
@@ -18,7 +16,7 @@ _ERROR = Tuple[int, int, str, None]
 _SEPARATOR = "_"
 
 
-class _LITERAL_TYPE(enum.Enum):
+class _LiteralType(enum.Enum):
     DEC = enum.auto()
     BIN = enum.auto()
     OCT = enum.auto()
@@ -27,7 +25,7 @@ class _LITERAL_TYPE(enum.Enum):
     EXPONENTFLOAT = enum.auto()
 
     @classmethod
-    def of(cls, string) -> _LITERAL_TYPE:
+    def of(cls, string: str) -> _LiteralType:
         prefix = string[:2].lower()
         if prefix == "0b":
             return cls.BIN
@@ -49,7 +47,7 @@ def _find_invalid_sep(string: str, len_: int) -> int:
     if input is separated validly.
 
     :param string: Input string.
-    :param len_: Separation length.
+    :param len_: Separation length.  # noqa: RST306
     :returns: Position where invalid separator was found, or -1 for valid input.
     """
     toplevel = True
@@ -71,7 +69,9 @@ def _find_invalid_sep(string: str, len_: int) -> int:
 
         current_len += 1
 
-    if current_len != len_:
+    if current_len > len_:
+        return len(string)
+    if not toplevel and current_len < len_:
         return len(string)
     return -1
 
@@ -99,8 +99,7 @@ class Checker:
         self.file_tokens = file_tokens
 
         self._check_for = {
-            type_: getattr(self, f"_check_{type_.name}")
-            for type_ in _LITERAL_TYPE
+            type_: getattr(self, f"_check_{type_.name}") for type_ in _LiteralType
         }
         return
 
@@ -113,40 +112,44 @@ class Checker:
             if token.type != tokenize.NUMBER:
                 continue
 
-            literal_type = _LITERAL_TYPE.of(token.string)
+            literal_type = _LiteralType.of(token.string)
 
             yield from self._check_for[literal_type](token)
         return
 
-    def _check_DEC(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+    def _check_DEC(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:  # noqa: N802
         invalid = _find_invalid_sep(token.string, self.dec_len)
         if invalid >= 0:
             yield (token.start[0], token.start[1] + invalid, "NSP001 DEC Invalid", None)
         return
 
-    def _check_BIN(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+    def _check_BIN(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:  # noqa: N802
         body = token.string[2:]
         invalid = _find_invalid_sep(body, self.bin_len)
         if invalid >= 0:
             yield (token.start[0], token.start[1] + invalid, "NSP011 BIN Invalid", None)
         return
 
-    def _check_OCT(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+    def _check_OCT(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:  # noqa: N802
         body = token.string[2:]
         invalid = _find_invalid_sep(body, self.oct_len)
         if invalid >= 0:
             yield (token.start[0], token.start[1] + invalid, "NSP021 OCT Invalid", None)
         return
 
-    def _check_HEX(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+    def _check_HEX(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:  # noqa: N802
         body = token.string[2:]
         invalid = _find_invalid_sep(body, self.hex_len)
         if invalid >= 0:
             yield (token.start[0], token.start[1] + invalid, "NSP031 HEX Invalid", None)
         return
 
-    def _check_POINTFLOAT(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
-        raise NotImplemented
+    def _check_POINTFLOAT(  # noqa: N802
+        self, token: tokenize.TokenInfo
+    ) -> Iterable[_ERROR]:
+        raise NotImplementedError
 
-    def _check_EXPONENTFLOAT(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
-        raise NotImplemented
+    def _check_EXPONENTFLOAT(  # noqa: N802
+        self, token: tokenize.TokenInfo
+    ) -> Iterable[_ERROR]:
+        raise NotImplementedError
