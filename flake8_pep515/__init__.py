@@ -74,11 +74,16 @@ class Checker:
         """
         self.tree = tree
         self.file_tokens = file_tokens
+
+        self._check_for = {
+            type_: getattr(self, f"_check_{type_.name}")
+            for type_ in _LITERAL_TYPE
+        }
         return
 
-    def _get_check_for(self, type_: _LITERAL_TYPE):
-        name_lower = type_.name.lower()
-        return getattr(self, f"_check_{name_lower}")
+    # def _get_check_for(self, type_: _LITERAL_TYPE):
+    #     name_lower = type_.name.lower()
+    #     return getattr(self, f"_check_{name_lower}")
 
     def run(self) -> Iterable[_ERROR]:
         """Run checker.
@@ -91,12 +96,36 @@ class Checker:
 
             literal_type = _LITERAL_TYPE.of(token.string)
 
-            yield from self._get_check_for(literal_type)(token)
+            yield from self._check_for[literal_type](token)
         return
 
-    def _check_dec(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+    def _check_DEC(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
         if not _is_separated_validly(token.string, self.dec_len):
-            yield (token.end[0], token.end[1], "NSP Invalid", None)
+            yield (token.end[0], token.end[1], "NSP001 DEC Invalid", None)
         return
-        
-        
+
+    def _check_BIN(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+        body = token.string[2:]
+        if not _is_separated_validly(body, self.bin_len):
+            yield (token.end[0], token.end[1], "NSP011 BIN Invalid", None)
+        return
+        raise NotImplemented
+
+    def _check_OCT(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+        body = token.string[2:]
+        if not _is_separated_validly(body, self.oct_len):
+            yield (token.end[0], token.end[1], "NSP021 OCT Invalid", None)
+        return
+        raise NotImplemented
+
+    def _check_HEX(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+        body = token.string[2:]
+        if not _is_separated_validly(body, self.hex_len):
+            yield (token.end[0], token.end[1], "NSP031 HEX Invalid", None)
+        return
+
+    def _check_POINTFLOAT(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+        raise NotImplemented
+
+    def _check_EXPONENTFLOAT(self, token: tokenize.TokenInfo) -> Iterable[_ERROR]:
+        raise NotImplemented

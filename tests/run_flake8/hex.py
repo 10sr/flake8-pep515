@@ -1,0 +1,2 @@
+c = 0xCAFE_F00D
+c = 0xCAFEF_00D
